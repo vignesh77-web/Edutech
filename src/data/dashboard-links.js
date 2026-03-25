@@ -1,0 +1,72 @@
+import { ACCOUNT_TYPE } from "../utils/constants";
+export const sidebarLinks = [
+  {
+    id: 1,
+    name: "My Profile",
+    path: "/dashboard/my-profile",
+    icon: "VscAccount",
+  },
+  {
+    id: 2,
+    name: "Dashboard",
+    path: "/dashboard/instructor",
+    type: ACCOUNT_TYPE.INSTRUCTOR,
+    icon: "VscDashboard",
+  },
+  {
+    id: 3,
+    name: "My Courses",
+    path: "/dashboard/my-courses",
+    type: ACCOUNT_TYPE.INSTRUCTOR,
+    icon: "VscVm",
+  },
+  {
+    id: 4,
+    name: "Add Course",
+    path: "/dashboard/add-course",
+    type: ACCOUNT_TYPE.INSTRUCTOR,
+    icon: "VscAdd",
+  },
+  {
+    id: 5,
+    name: "Enrolled Courses",
+    path: "/dashboard/enrolled-courses",
+    type: "Student",
+    icon: "VscMortarBoard",
+  },
+  {
+    id: 6,
+    name: "Subscriptions",
+    path: "/dashboard/subscriptions",
+    type: "Student",
+    icon: "VscRocket",
+  },
+  {
+    id: 7,
+    name: "Test Series",
+    path: "/dashboard/test-series",
+    type: "Student",
+    icon: "VscChecklist",
+  },
+  {
+    id: 10,
+    name: "Manage Live Classes",
+    path: "/dashboard/manage-live-classes",
+    type: ACCOUNT_TYPE.INSTRUCTOR,
+    icon: "VscBroadcast",
+  },
+  {
+    id: 9,
+    name: "Live Classes",
+    path: "/dashboard/live-classes",
+    type: "Student",
+    icon: "VscBroadcast",
+  },
+  {
+    id: 11,
+    name: "Manage Test Series",
+    path: "/dashboard/manage-test-series",
+    type: ACCOUNT_TYPE.INSTRUCTOR,
+    icon: "VscLibrary",
+  },
+];
