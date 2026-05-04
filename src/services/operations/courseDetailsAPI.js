@@ -1,6 +1,15 @@
 import { toast } from "react-hot-toast"
 import { apiConnector } from "../apiconnector"
-import { courseEndpoints } from "../apis"
+import { courseEndpoints, ratingsEndpoints } from "../apis"
+
+const {
+  REVIEWS_DETAILS_API,
+  GET_AVERAGE_RATING_API,
+  GET_INSTRUCTOR_REVIEWS_API,
+  ADD_REPLY_TO_REVIEW_API,
+  TOGGLE_HELPFUL_API,
+  TOGGLE_NOT_HELPFUL_API,
+} = ratingsEndpoints
 
 const {
   COURSE_DETAILS_API,
@@ -12,6 +21,7 @@ const {
   CREATE_SUBSECTION_API,
   UPDATE_SECTION_API,
   UPDATE_SUBSECTION_API,
+  DELETE_SUBSECTION_RESOURCE_API,
   DELETE_SECTION_API,
   DELETE_SUBSECTION_API,
   GET_ALL_INSTRUCTOR_COURSES_API,
@@ -105,21 +115,24 @@ export const addCourseDetails = async (data, token) => {
 // edit the course details
 export const editCourseDetails = async (data, token) => {
   let result = null
-  const toastId = toast.loading("Loading...")
+  const toastId = toast.loading("Updating course details...")
   try {
+    console.log("Editing course with data:", data)
     const response = await apiConnector("POST", EDIT_COURSE_API, data, {
       "Content-Type": "multipart/form-data",
       Authorization: `Bearer ${token}`,
     })
     console.log("EDIT COURSE API RESPONSE............", response)
     if (!response?.data?.success) {
-      throw new Error("Could Not Update Course Details")
+      throw new Error(response?.data?.message || "Could Not Update Course Details")
     }
     toast.success("Course Details Updated Successfully")
     result = response?.data?.data
+    console.log("Updated course data:", result)
   } catch (error) {
     console.log("EDIT COURSE API ERROR............", error)
-    toast.error(error.message)
+    const errorMessage = error?.response?.data?.message || error?.message || "Failed to update course"
+    toast.error(errorMessage)
   }
   toast.dismiss(toastId)
   return result
@@ -152,18 +165,21 @@ export const createSubSection = async (data, token) => {
   let result = null
   const toastId = toast.loading("Loading...")
   try {
+    console.log("Creating sub-section with data:", data)
     const response = await apiConnector("POST", CREATE_SUBSECTION_API, data, {
       Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
     })
     console.log("CREATE SUB-SECTION API RESPONSE............", response)
     if (!response?.data?.success) {
-      throw new Error("Could Not Add Lecture")
+      throw new Error(response?.data?.message || "Could Not Add Lecture")
     }
     toast.success("Lecture Added")
     result = response?.data?.data
   } catch (error) {
     console.log("CREATE SUB-SECTION API ERROR............", error)
-    toast.error(error.message)
+    const errorMessage = error?.response?.data?.message || error?.message || "Failed to add lecture"
+    toast.error(errorMessage)
   }
   toast.dismiss(toastId)
   return result
@@ -196,18 +212,50 @@ export const updateSubSection = async (data, token) => {
   let result = null
   const toastId = toast.loading("Loading...")
   try {
+    console.log("Updating sub-section with data:", data)
     const response = await apiConnector("POST", UPDATE_SUBSECTION_API, data, {
       Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
     })
     console.log("UPDATE SUB-SECTION API RESPONSE............", response)
     if (!response?.data?.success) {
-      throw new Error("Could Not Update Lecture")
+      throw new Error(response?.data?.message || "Could Not Update Lecture")
     }
     toast.success("Lecture Updated")
     result = response?.data?.data
   } catch (error) {
     console.log("UPDATE SUB-SECTION API ERROR............", error)
-    toast.error(error.message)
+    const errorMessage = error?.response?.data?.message || error?.message || "Failed to update lecture"
+    toast.error(errorMessage)
+  }
+  toast.dismiss(toastId)
+  return result
+}
+
+// delete a subsection resource
+export const deleteSubSectionResource = async (data, token) => {
+  let result = null
+  const toastId = toast.loading("Loading...")
+  try {
+    const response = await apiConnector(
+      "POST",
+      DELETE_SUBSECTION_RESOURCE_API,
+      data,
+      {
+        Authorization: `Bearer ${token}`,
+      }
+    )
+    console.log("DELETE SUB-SECTION RESOURCE API RESPONSE............", response)
+    if (!response?.data?.success) {
+      throw new Error(response?.data?.message || "Could Not Delete Resource")
+    }
+    toast.success("Resource Deleted")
+    result = response?.data?.data
+  } catch (error) {
+    console.log("DELETE SUB-SECTION RESOURCE API ERROR............", error)
+    const errorMessage =
+      error?.response?.data?.message || error?.message || "Failed to delete resource"
+    toast.error(errorMessage)
   }
   toast.dismiss(toastId)
   return result
@@ -382,4 +430,56 @@ export const createRating = async (data, token) => {
   }
   toast.dismiss(toastId)
   return success
+}
+
+// Instructor reply to review
+export const addReplyToReview = async (reviewId, reply, token) => {
+  const toastId = toast.loading("Loading...")
+  let result = null
+  try {
+    const response = await apiConnector("POST", ADD_REPLY_TO_REVIEW_API, { reviewId, reply }, {
+      Authorization: `Bearer ${token}`,
+    })
+    console.log("REPLY TO REVIEW API RESPONSE............", response)
+    if (!response?.data?.success) {
+      throw new Error("Could Not Add Reply")
+    }
+    toast.success("Reply Added")
+    result = response?.data?.data
+  } catch (error) {
+    console.log("REPLY TO REVIEW API ERROR............", error)
+    toast.error(error.response?.data?.message || error.message)
+  }
+  toast.dismiss(toastId)
+  return result
+}
+
+export const toggleHelpful = async (reviewId, token) => {
+  try {
+    const response = await apiConnector("POST", TOGGLE_HELPFUL_API, { reviewId }, {
+      Authorization: `Bearer ${token}`,
+    })
+    if (!response?.data?.success) {
+      throw new Error("Could Not Update Vote")
+    }
+    return response.data.data
+  } catch (error) {
+    console.log("TOGGLE_HELPFUL_API API ERROR............", error)
+    return null
+  }
+}
+
+export const toggleNotHelpful = async (reviewId, token) => {
+  try {
+    const response = await apiConnector("POST", TOGGLE_NOT_HELPFUL_API, { reviewId }, {
+      Authorization: `Bearer ${token}`,
+    })
+    if (!response?.data?.success) {
+      throw new Error("Could Not Update Vote")
+    }
+    return response.data.data
+  } catch (error) {
+    console.log("TOGGLE_NOT_HELPFUL_API API ERROR............", error)
+    return null
+  }
 }

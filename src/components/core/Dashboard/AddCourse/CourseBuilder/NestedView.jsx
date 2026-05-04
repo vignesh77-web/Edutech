@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { AiFillCaretDown } from "react-icons/ai"
+import { AiFillCaretDown, AiFillCaretUp } from "react-icons/ai"
 import { FaPlus } from "react-icons/fa"
 import { MdEdit } from "react-icons/md"
 import { RiDeleteBin6Line } from "react-icons/ri"
@@ -24,6 +24,15 @@ export default function NestedView({ handleChangeEditSectionName }) {
   const [editSubSection, setEditSubSection] = useState(null)
   // to keep track of confirmation modal
   const [confirmationModal, setConfirmationModal] = useState(null)
+  // Track which subsection descriptions are expanded (keyed by subSection _id)
+  const [expandedDesc, setExpandedDesc] = useState({})
+
+  const toggleDescription = (subSectionId) => {
+    setExpandedDesc((prev) => ({
+      ...prev,
+      [subSectionId]: !prev[subSectionId],
+    }))
+  }
 
   const handleDeleleSection = async (sectionId) => {
     const result = await deleteSection({
@@ -38,7 +47,7 @@ export default function NestedView({ handleChangeEditSectionName }) {
   }
 
   const handleDeleteSubSection = async (subSectionId, sectionId) => {
-    const result = await deleteSubSection({ subSectionId, sectionId, token })
+    const result = await deleteSubSection({ subSectionId, sectionId }, token)
     if (result) {
       // update the structure of course
       const updatedCourseContent = course.courseContent.map((section) =>
@@ -99,44 +108,70 @@ export default function NestedView({ handleChangeEditSectionName }) {
             <div className="px-6 pb-4">
               {/* Render All Sub Sections Within a Section */}
               {section.subSection.map((data) => (
-                <div
-                  key={data?._id}
-                  onClick={() => setViewSubSection(data)}
-                  className="flex cursor-pointer items-center justify-between gap-x-3 border-b-2 border-b-richblack-600 py-2"
-                >
-                  <div className="flex items-center gap-x-3 py-2 ">
-                    <RxDropdownMenu className="text-2xl text-richblack-50" />
-                    <p className="font-semibold text-richblack-50">
-                      {data.title}
-                    </p>
-                  </div>
+                <div key={data?._id} className="border-b-2 border-b-richblack-600">
+                  {/* Lecture Title Row */}
                   <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-x-3"
+                    onClick={() => setViewSubSection(data)}
+                    className="flex cursor-pointer items-center justify-between gap-x-3 py-2"
                   >
-                    <button
-                      onClick={() =>
-                        setEditSubSection({ ...data, sectionId: section._id })
-                      }
+                    <div className="flex items-center gap-x-3 py-2">
+                      <RxDropdownMenu className="text-2xl text-richblack-50" />
+                      <p className="font-semibold text-richblack-50">
+                        {data.title}
+                      </p>
+                      {/* Udemy-style toggle description button */}
+                      {data.description && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleDescription(data._id)
+                          }}
+                          title={expandedDesc[data._id] ? "Hide description" : "Show description"}
+                          className="flex items-center gap-x-1 rounded-md px-2 py-0.5 text-xs font-medium text-richblack-300 transition-all duration-200 hover:bg-richblack-600 hover:text-yellow-50"
+                        >
+                          {expandedDesc[data._id] ? (
+                            <AiFillCaretUp className="text-sm" />
+                          ) : (
+                            <AiFillCaretDown className="text-sm" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-x-3"
                     >
-                      <MdEdit className="text-xl text-richblack-300" />
-                    </button>
-                    <button
-                      onClick={() =>
-                        setConfirmationModal({
-                          text1: "Delete this Sub-Section?",
-                          text2: "This lecture will be deleted",
-                          btn1Text: "Delete",
-                          btn2Text: "Cancel",
-                          btn1Handler: () =>
-                            handleDeleteSubSection(data._id, section._id),
-                          btn2Handler: () => setConfirmationModal(null),
-                        })
-                      }
-                    >
-                      <RiDeleteBin6Line className="text-xl text-richblack-300" />
-                    </button>
+                      <button
+                        onClick={() =>
+                          setEditSubSection({ ...data, sectionId: section._id })
+                        }
+                      >
+                        <MdEdit className="text-xl text-richblack-300" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setConfirmationModal({
+                            text1: "Delete this Sub-Section?",
+                            text2: "This lecture will be deleted",
+                            btn1Text: "Delete",
+                            btn2Text: "Cancel",
+                            btn1Handler: () =>
+                              handleDeleteSubSection(data._id, section._id),
+                            btn2Handler: () => setConfirmationModal(null),
+                          })
+                        }
+                      >
+                        <RiDeleteBin6Line className="text-xl text-richblack-300" />
+                      </button>
+                    </div>
                   </div>
+                  {/* Collapsible Description Panel */}
+                  {data.description && expandedDesc[data._id] && (
+                    <div className="mb-2 ml-9 rounded-md bg-richblack-600 px-4 py-3 text-sm text-richblack-200 leading-relaxed">
+                      {data.description}
+                    </div>
+                  )}
                 </div>
               ))}
               {/* Add New Lecture to Section */}

@@ -31,17 +31,15 @@ export default function Upload({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: !video
-      ? { "image/*": [".jpeg", ".jpg", ".png"] }
-      : { "video/*": [".mp4"] },
+      ? { "image/*": [] }
+      : { "video/*": [] },
     onDrop,
   })
 
   const previewFile = (file) => {
-    // console.log(file)
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onloadend = () => {
-      setPreviewSource(reader.result)
+    if (file) {
+      const previewUrl = URL.createObjectURL(file)
+      setPreviewSource(previewUrl)
     }
   }
 

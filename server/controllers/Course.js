@@ -135,36 +135,95 @@ exports.createCourse = async (req, res) => {
 exports.editCourse = async (req, res) => {
   try {
     const { courseId } = req.body
+    const userId = req.user.id
     const updates = req.body
+    
     const course = await Course.findById(courseId)
 
     if (!course) {
-      return res.status(404).json({ error: "Course not found" })
+      return res.status(404).json({ 
+        success: false,
+        error: "Course not found" 
+      })
     }
 
-    // If Thumbnail Image is found, update it
-    if (req.files) {
-      console.log("thumbnail update")
-      const thumbnail = req.files.thumbnailImage
-      const thumbnailImage = await uploadImageToCloudinary(
-        thumbnail,
-        process.env.FOLDER_NAME
-      )
-      course.thumbnail = thumbnailImage.secure_url
+    // Verify instructor owns this course
+    if (course.instructor.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to edit this course"
+      })
     }
 
-    // Update only the fields that are present in the request body
-    for (const key in updates) {
-      if (updates.hasOwnProperty(key)) {
-        if (key === "tag" || key === "instructions") {
-          course[key] = JSON.parse(updates[key])
-        } else {
-          course[key] = updates[key]
+    // Whitelist the fields that can be updated
+    const allowedFields = [
+      'courseName',
+      'courseDescription',
+      'price',
+      'tag',
+      'instructions',
+      'whatYouWillLearn',
+      'category',
+      'status'
+    ]
+
+    // Update thumbnail if provided
+    if (req.files && req.files.thumbnailImage) {
+      try {
+        console.log("Updating thumbnail image")
+        const thumbnail = req.files.thumbnailImage
+        const thumbnailImage = await uploadImageToCloudinary(
+          thumbnail,
+          process.env.FOLDER_NAME
+        )
+        course.thumbnail = thumbnailImage.secure_url
+        console.log("Thumbnail updated successfully")
+      } catch (error) {
+        console.error("Error uploading thumbnail:", error)
+        // Continue without thumbnail update if it fails
+      }
+    }
+
+    // Update only the whitelisted fields from the request body
+    let hasChanges = false
+    for (const key of allowedFields) {
+      if (updates.hasOwnProperty(key) && updates[key] !== undefined) {
+        try {
+          if (key === "tag" || key === "instructions") {
+            // Parse JSON arrays
+            course[key] = JSON.parse(updates[key])
+            console.log(`Updated ${key}:`, course[key])
+            hasChanges = true
+          } else if (key === "category") {
+            // Ensure category is a valid ObjectId
+            course[key] = updates[key]
+            console.log(`Updated ${key}:`, course[key])
+            hasChanges = true
+          } else {
+            course[key] = updates[key]
+            console.log(`Updated ${key}:`, updates[key])
+            hasChanges = true
+          }
+        } catch (error) {
+          console.error(`Error updating ${key}:`, error)
+          return res.status(400).json({
+            success: false,
+            message: `Error updating ${key}: ${error.message}`
+          })
         }
       }
     }
 
+    if (!hasChanges && !req.files) {
+      return res.status(400).json({
+        success: false,
+        message: "No changes to update"
+      })
+    }
+
+    // Save the updated course
     await course.save()
+    console.log("Course saved successfully with ID:", courseId)
 
     const updatedCourse = await Course.findOne({
       _id: courseId,
@@ -181,6 +240,7 @@ exports.editCourse = async (req, res) => {
         path: "courseContent",
         populate: {
           path: "subSection",
+          select: "title description timeDuration videoUrl resources captionUrl subSectionType questions",
         },
       })
       .exec()
@@ -299,7 +359,7 @@ exports.getCourseDetails = async (req, res) => {
         path: "courseContent",
         populate: {
           path: "subSection",
-          select: "-videoUrl",
+          select: "title description timeDuration resources captionUrl subSectionType questions",
         },
       })
       .exec()
@@ -328,11 +388,24 @@ exports.getCourseDetails = async (req, res) => {
 
     const totalDuration = convertSecondsToDuration(totalDurationInSeconds)
 
+    // Recommendations (Algorithmic: Frequently Bought Together / Similar)
+    const similarCourses = await Course.find({
+      category: courseDetails.category._id,
+      _id: { $ne: courseId },
+      status: "Published",
+    })
+    .sort({ "studentsEnrolled": -1 }) // Sort by popularity
+    .limit(3)
+    .populate("instructor")
+    .populate("ratingAndReviews")
+    .exec()
+
     return res.status(200).json({
       success: true,
       data: {
         courseDetails,
         totalDuration,
+        similarCourses,
       },
     })
   } catch (error) {
@@ -361,6 +434,7 @@ exports.getFullCourseDetails = async (req, res) => {
         path: "courseContent",
         populate: {
           path: "subSection",
+          select: "title description timeDuration videoUrl resources captionUrl subSectionType questions",
         },
       })
       .exec()
@@ -500,5 +574,91 @@ exports.deleteCourse = async (req, res) => {
       message: "Server error",
       error: error.message,
     })
+  }
+}
+
+exports.submitForReview = async (req, res) => {
+  try {
+    const { courseId } = req.body;
+    const userId = req.user.id;
+
+    const course = await Course.findById(courseId);
+    if (!course) return res.status(404).json({ success: false, message: "Course not found" });
+
+    if (course.instructor.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    course.status = "Under Review";
+    await course.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Course submitted for review",
+      data: course,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+exports.approveCourse = async (req, res) => {
+  try {
+    const { courseId, approve } = req.body; // approve: boolean
+
+    const course = await Course.findById(courseId);
+    if (!course) return res.status(404).json({ success: false, message: "Course not found" });
+
+    course.status = approve ? "Published" : "Draft";
+    await course.save();
+
+    return res.status(200).json({
+      success: true,
+      message: approve ? "Course Published" : "Course Rejected (returned to Draft)",
+      data: course,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+exports.addCoInstructor = async (req, res) => {
+  try {
+    const { courseId, coInstructorEmail, sharePercentage } = req.body;
+    const userId = req.user.id;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Course not found" });
+    }
+
+    if (course.instructor.toString() !== userId) {
+      return res.status(403).json({ success: false, message: "Only the primary instructor can add co-instructors" });
+    }
+
+    const coInstructor = await User.findOne({ email: coInstructorEmail, accountType: "Instructor" });
+    if (!coInstructor) {
+      return res.status(404).json({ success: false, message: "Co-instructor not found or not an instructor" });
+    }
+
+    // Check if total percentage exceeds 100
+    const currentShares = course.coInstructors.reduce((acc, curr) => acc + curr.sharePercentage, 0);
+    if (currentShares + sharePercentage > 100) {
+      return res.status(400).json({ success: false, message: "Total revenue share cannot exceed 100%" });
+    }
+
+    course.coInstructors.push({ user: coInstructor._id, sharePercentage });
+    await course.save();
+
+    // Add course to co-instructor's courses array
+    await User.findByIdAndUpdate(coInstructor._id, { $push: { courses: courseId } });
+
+    return res.status(200).json({
+      success: true,
+      message: "Co-instructor added successfully",
+      course,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 }

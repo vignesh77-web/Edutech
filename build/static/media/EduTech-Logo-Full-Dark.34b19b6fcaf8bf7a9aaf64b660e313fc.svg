@@ -1,0 +1,38 @@
+<svg width="240" height="60" viewBox="0 0 240 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconGradDark" x1="0" y1="0" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#118AB2"/>
+      <stop offset="1" stop-color="#47A5C5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Circular Border with Nodes -->
+  <circle cx="30" cy="30" r="27" stroke="#118AB2" stroke-width="1.5" stroke-dasharray="3 5"/>
+  <circle cx="57" cy="30" r="2" fill="#118AB2"/>
+  <circle cx="3" cy="30" r="2" fill="#118AB2"/>
+  <circle cx="30" cy="3" r="2" fill="#118AB2"/>
+  <circle cx="30" cy="57" r="2" fill="#118AB2"/>
+
+  <!-- ET Monogram with Book and Chip -->
+  <g transform="translate(15, 15)">
+    <!-- 'E' with chip lines -->
+    <path d="M0 5H18V8H5V12H15V15H5V22H18V25H0V5Z" fill="#118AB2"/>
+    <path d="M7 10H13V11H7V10ZM7 17H13V18H7V17Z" fill="white" opacity="0.6"/>
+    
+    <!-- 'T' merging -->
+    <path d="M20 5H30V8H26V25H23V8H20V5Z" fill="#118AB2"/>
+
+    <!-- Book Icon on top -->
+    <path d="M10 0C8.5 0 7 1 7 2.5V4H23V2.5C23 1 21.5 0 20 0H10Z" fill="#FFD60A"/>
+    <path d="M7 4H23V5H7V4Z" fill="#Blue" opacity="0.3"/>
+  </g>
+
+  <!-- Sweeping Arrow -->
+  <path d="M12 48Q25 45 45 15" stroke="#FFD60A" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path d="M42 15L48 12L45 19Z" fill="#FFD60A"/>
+
+  <!-- Text -->
+  <text x="65" y="42" font-family="Inter, sans-serif" font-size="36" font-weight="800" style="letter-spacing: -1px">
+    <tspan fill="#F1F2FF">Edu</tspan><tspan fill="#FFD60A">Tech</tspan>
+  </text>
+</svg>

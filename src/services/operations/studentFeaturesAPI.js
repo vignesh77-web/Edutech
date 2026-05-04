@@ -6,7 +6,7 @@ import { setPaymentLoading } from "../../slices/courseSlice";
 import { resetCart } from "../../slices/cartSlice";
 
 
-const { COURSE_PAYMENT_API, COURSE_VERIFY_API, SEND_PAYMENT_SUCCESS_EMAIL_API } = studentEndpoints;
+const { COURSE_PAYMENT_API, COURSE_VERIFY_API, SEND_PAYMENT_SUCCESS_EMAIL_API, REQUEST_REFUND_API } = studentEndpoints;
 
 function loadScript(src) {
     return new Promise((resolve) => {
@@ -24,7 +24,7 @@ function loadScript(src) {
 }
 
 
-export async function buyCourse(token, courses, userDetails, navigate, dispatch) {
+export async function buyCourse(token, courses, userDetails, navigate, dispatch, couponCode = null) {
     const toastId = toast.loading("Loading...");
     try {
         //load the script
@@ -37,7 +37,7 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
 
         //initiate the order
         const orderResponse = await apiConnector("POST", COURSE_PAYMENT_API,
-            { courses },
+            { courses, couponCode },
             {
                 Authorization: `Bearer ${token}`,
             })
@@ -66,7 +66,7 @@ export async function buyCourse(token, courses, userDetails, navigate, dispatch)
                 //send successful wala mail
                 sendPaymentSuccessEmail(response, amount, token);
                 //verifyPayment
-                verifyPayment({ ...response, courses }, token, navigate, dispatch);
+                verifyPayment({ ...response, courses, couponCode }, token, navigate, dispatch);
             }
         }
         //miss hogya tha 
@@ -123,4 +123,26 @@ async function verifyPayment(bodyData, token, navigate, dispatch) {
     }
     toast.dismiss(toastId);
     dispatch(setPaymentLoading(false));
+}
+
+export async function askForRefund(token, courseId) {
+    const toastId = toast.loading("Processing Refund...");
+    let success = false;
+    try {
+        const response = await apiConnector("POST", REQUEST_REFUND_API, { courseId }, {
+            Authorization: `Bearer ${token}`
+        });
+
+        if (!response.data.success) {
+            throw new Error(response.data.message);
+        }
+        
+        toast.success(response.data.message || "Refund successful! Course access removed.");
+        success = true;
+    } catch (error) {
+        console.log("REFUND ERROR....", error);
+        toast.error(error.response?.data?.message || "Could not process refund.");
+    }
+    toast.dismiss(toastId);
+    return success;
 }

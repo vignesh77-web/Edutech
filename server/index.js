@@ -9,6 +9,8 @@ const profileRoutes = require("./routes/Profile");
 const paymentRoutes = require("./routes/Payments");
 const courseRoutes = require("./routes/Course");
 const contactUsRoute = require("./routes/Contact");
+const chatRoutes = require("./routes/Chat");
+const affiliateRoutes = require("./routes/Affiliate");
 const database = require("./config/database");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
@@ -23,7 +25,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
 	cors({
-		origin: "*",
+		origin: true,
 		credentials: true,
 	})
 )
@@ -32,6 +34,8 @@ app.use(
 	fileUpload({
 		useTempFiles: true,
 		tempFileDir: "/tmp",
+		limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2 GB
+		abortOnLimit: true,
 	})
 )
 //cloudinary connection
@@ -43,6 +47,8 @@ app.use("/api/v1/profile", profileRoutes);
 app.use("/api/v1/course", courseRoutes);
 app.use("/api/v1/payment", paymentRoutes);
 app.use("/api/v1/reach", contactUsRoute);
+app.use("/api/v1/chat", chatRoutes);
+app.use("/api/v1/affiliate", affiliateRoutes);
 
 //def route
 

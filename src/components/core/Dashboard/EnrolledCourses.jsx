@@ -4,9 +4,12 @@ import { useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { FiLock, FiCalendar, FiAlertTriangle } from "react-icons/fi"
 import { getUserEnrolledCourses } from "../../../services/operations/profileAPI"
+import { askForRefund } from "../../../services/operations/studentFeaturesAPI"
+import CourseCertificate from "./EnrolledCourses/CourseCertificate"
 
 export default function EnrolledCourses() {
   const { token } = useSelector((state) => state.auth)
+  const { user } = useSelector((state) => state.profile)
   const navigate = useNavigate()
 
   const [enrolledCourses, setEnrolledCourses] = useState(null)
@@ -22,6 +25,16 @@ export default function EnrolledCourses() {
     }
     getEnrolledCourses()
   }, [token])
+
+  const handleRefund = async (courseId) => {
+    if(window.confirm("Are you sure you want to request a refund? You will immediately lose access to this course.")) {
+      const success = await askForRefund(token, courseId)
+      if(success) {
+        const res = await getUserEnrolledCourses(token)
+        setEnrolledCourses(res)
+      }
+    }
+  }
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A"
@@ -61,6 +74,7 @@ export default function EnrolledCourses() {
           {enrolledCourses.map((course, i, arr) => {
             const isExpired = course.expiresAt && new Date(course.expiresAt) < new Date()
             const isLast = i === arr.length - 1
+            const isRefundable = course.enrolledAt && (new Date() - new Date(course.enrolledAt)) / (1000 * 60 * 60 * 24) <= 30
 
             return (
               <div
@@ -177,6 +191,21 @@ export default function EnrolledCourses() {
                     bgColor={isExpired ? "#f87171" : "#00C8A0"}
                     baseBgColor="#2C333F"
                   />
+                  {isRefundable && !isExpired && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleRefund(course._id); }}
+                      className="mt-2 text-[11px] font-semibold text-pink-200 hover:text-pink-300 self-start border border-pink-700/50 bg-pink-900/10 px-2 py-1 rounded"
+                    >
+                      Request Refund (30-day guarantee)
+                    </button>
+                  )}
+                  {course.progressPercentage === 100 && (
+                    <CourseCertificate 
+                      courseName={course.courseName}
+                      studentName={`${user.firstName} ${user.lastName}`}
+                      date={new Date().toLocaleDateString("en-IN", { day: '2-digit', month: 'short', year: 'numeric' })}
+                    />
+                  )}
                 </div>
               </div>
             )

@@ -56,7 +56,24 @@ exports.deleteAccount = async (req, res) => {
 		}
 		// Delete Assosiated Profile with the User
 		await Profile.findByIdAndDelete({ _id: user.additionalDetails });
-		// TODO: Unenroll User From All the Enrolled Courses
+		
+		// Unenroll User From All the Enrolled Courses
+		const Course = require("../models/Course");
+		if (user.courses && user.courses.length > 0) {
+			for (const courseObj of user.courses) {
+				const courseId = courseObj.courseId ? courseObj.courseId : courseObj;
+				await Course.findByIdAndUpdate(courseId, {
+					$pull: { studentsEnrolled: id },
+				});
+			}
+		}
+
+		// Delete User's CourseProgress
+		if (user.courseProgress && user.courseProgress.length > 0) {
+			const CourseProgress = require("../models/CourseProgress");
+			await CourseProgress.deleteMany({ _id: { $in: user.courseProgress } });
+		}
+
 		// Now Delete User
 		await User.findByIdAndDelete({ _id: id });
 		res.status(200).json({

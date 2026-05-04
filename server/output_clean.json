@@ -1,0 +1,29 @@
+[
+  {
+    "_id": "69dc9105ce1e84e6dbb626f1",
+    "title": "Lists",
+    "timeDuration": "undefined",
+    "description": "adsfdgfghg",
+    "captionUrl": null,
+    "subSectionType": "Video",
+    "resources": [
+      {
+        "name": "Second_Progress_Report.pdf",
+        "_id": "69dc9105ce1e84e6dbb626f2"
+      }
+    ],
+    "questions": [],
+    "__v": 0
+  },
+  {
+    "_id": "69dc90b4ce1e84e6dbb626e7",
+    "title": "Conditional Statements",
+    "timeDuration": "undefined",
+    "description": "asdfghjk",
+    "captionUrl": null,
+    "subSectionType": "Video",
+    "resources": [],
+    "questions": [],
+    "__v": 0
+  }
+]

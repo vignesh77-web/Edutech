@@ -149,3 +149,140 @@ exports.getAllRating = async (req, res) => {
         })
     } 
 }
+
+exports.getInstructorReviews = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userCourses = await Course.find({ instructor: userId });
+        const courseIds = userCourses.map(c => c._id);
+        
+        const reviews = await RatingAndReview.find({ course: { $in: courseIds } })
+                                .sort({createdAt: "desc"})
+                                .populate("user", "firstName lastName email image")
+                                .populate("course", "courseName")
+                                .exec();
+                                
+        return res.status(200).json({
+            success: true,
+            data: reviews,
+        });
+    } catch(error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+}
+
+exports.addReplyToReview = async (req, res) => {
+    try {
+        const { reviewId, reply } = req.body;
+        const userId = req.user.id;
+
+        if (!reviewId || !reply) {
+            return res.status(400).json({
+                success: false,
+                message: "Review ID and reply text are required",
+            });
+        }
+
+        const reviewData = await RatingAndReview.findById(reviewId).populate('course');
+
+        if (!reviewData) {
+            return res.status(404).json({
+                success: false,
+                message: "Review not found",
+            });
+        }
+
+        // Check if the current user is the instructor of the course
+        if (reviewData.course.instructor.toString() !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to reply to this review",
+            });
+        }
+
+        reviewData.instructorReply = reply;
+        await reviewData.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Reply added successfully",
+            data: reviewData,
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+}
+
+exports.toggleHelpful = async (req, res) => {
+    try {
+        const { reviewId } = req.body;
+        const userId = req.user.id;
+
+        const reviewData = await RatingAndReview.findById(reviewId);
+        if (!reviewData) {
+            return res.status(404).json({ success: false, message: "Review not found" });
+        }
+
+        // Remove from notHelpful if present
+        reviewData.notHelpfulVotes = reviewData.notHelpfulVotes.filter(id => id.toString() !== userId);
+
+        if (reviewData.helpfulVotes.includes(userId)) {
+            // Already upvoted, so remove it
+            reviewData.helpfulVotes = reviewData.helpfulVotes.filter(id => id.toString() !== userId);
+        } else {
+            // Add to upvotes
+            reviewData.helpfulVotes.push(userId);
+        }
+
+        await reviewData.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Vote updated",
+            data: reviewData,
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+}
+
+exports.toggleNotHelpful = async (req, res) => {
+    try {
+        const { reviewId } = req.body;
+        const userId = req.user.id;
+
+        const reviewData = await RatingAndReview.findById(reviewId);
+        if (!reviewData) {
+            return res.status(404).json({ success: false, message: "Review not found" });
+        }
+
+        // Remove from helpful if present
+        reviewData.helpfulVotes = reviewData.helpfulVotes.filter(id => id.toString() !== userId);
+
+        if (reviewData.notHelpfulVotes.includes(userId)) {
+            // Already downvoted, so remove it
+            reviewData.notHelpfulVotes = reviewData.notHelpfulVotes.filter(id => id.toString() !== userId);
+        } else {
+            // Add to downvotes
+            reviewData.notHelpfulVotes.push(userId);
+        }
+
+        await reviewData.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Vote updated",
+            data: reviewData,
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+}

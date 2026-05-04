@@ -5,18 +5,22 @@ const User = require("../models/User");
 //auth
 exports.auth = async (req, res, next) => {
     try {
-        console.log("BEFORE TOKEN EXTRACTION");
-        console.log("Authorization Header:", req.header("Authorization"));
-        console.log("JWT_SECRET (first 4):", process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 4) : "MISSING");
-        //extract token
-        const token = req.cookies.token
+        console.log("[AUTH] BEFORE TOKEN EXTRACTION");
+        console.log("[AUTH] Authorization Header:", req.header("Authorization"));
+        console.log("[AUTH] JWT_SECRET (first 4):", process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 4) : "MISSING");
+        
+        //extract token from multiple sources
+        // Priority: Authorization header > request query > request body > cookies
+        const token = req.header("Authorization") && req.header("Authorization").replace("Bearer ", "")
+            || req.query.token
             || req.body.token
-            || (req.header("Authorization") && req.header("Authorization").replace("Bearer ", ""));
+            || req.cookies.token;
 
-        console.log("TOKEN EXTRACTED:", token ? (token.substring(0, 10) + "...") : "NO");
+        console.log("[AUTH] TOKEN EXTRACTED:", token ? (token.substring(0, 10) + "...") : "NO TOKEN FOUND");
 
         //if token missing, then return response
         if (!token) {
+            console.log("[AUTH] ERROR: Token is missing");
             return res.status(401).json({
                 success: false,
                 message: 'Token is missing',
@@ -26,21 +30,30 @@ exports.auth = async (req, res, next) => {
         //verify the token
         try {
             const decode = jwt.verify(token, process.env.JWT_SECRET);
-            console.log("DECODED TOKEN:", decode);
+            console.log("[AUTH] DECODED TOKEN:", {
+                email: decode.email,
+                id: decode.id,
+                accountType: decode.accountType,
+                iat: decode.iat,
+                exp: decode.exp
+            });
+            
+            // Attach decoded token to request for downstream handlers
             req.user = decode;
+            next();
         }
         catch (err) {
             //verification - issue
-            console.log("TOKEN VERIFICATION FAILED:", err.message);
+            console.log("[AUTH] TOKEN VERIFICATION FAILED:", err.message);
             return res.status(401).json({
                 success: false,
                 message: `token is invalid: ${err.message}`,
             });
         }
-        next();
+
     }
     catch (error) {
-        console.log("AUTH MIDDLEWARE ERROR:", error.message);
+        console.log("[AUTH] MIDDLEWARE ERROR:", error.message);
         return res.status(401).json({
             success: false,
             message: 'Something went wrong while validating the token',

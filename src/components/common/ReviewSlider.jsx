@@ -11,14 +11,18 @@ import "swiper/css/pagination"
 import "swiper/css/autoplay"
 
 // Icons
-import { FaStar } from "react-icons/fa"
+import { FaStar, FaRegThumbsUp, FaRegThumbsDown, FaThumbsUp, FaThumbsDown } from "react-icons/fa"
+import { useSelector } from "react-redux"
 
 // Get apiFunction and the endpoint
 import { apiConnector } from "../../services/apiconnector";
 import { ratingsEndpoints } from "../../services/apis"
+import { toggleHelpful, toggleNotHelpful } from "../../services/operations/courseDetailsAPI"
 
 
 function ReviewSlider() {
+  const { token } = useSelector((state) => state.auth)
+  const { user } = useSelector((state) => state.profile)
   const [reviews, setReviews] = useState([])
   const truncateWords = 15
 
@@ -33,6 +37,18 @@ function ReviewSlider() {
       }
     })()
   }, [])
+
+  const handleVote = async (reviewId, type) => {
+    if (!token) return;
+    
+    const result = type === "helpful" 
+      ? await toggleHelpful(reviewId, token) 
+      : await toggleNotHelpful(reviewId, token);
+
+    if (result) {
+      setReviews(prev => prev.map(r => r._id === reviewId ? { ...r, helpfulVotes: result.helpfulVotes, notHelpfulVotes: result.notHelpfulVotes } : r));
+    }
+  }
 
  
 
@@ -107,6 +123,36 @@ function ReviewSlider() {
                       fullIcon={<FaStar />}
                     />
                   </div>
+
+                  {/* Voting Section */}
+                  <div className="flex items-center gap-4 mt-auto pt-2 border-t border-richblack-700">
+                    <button 
+                      onClick={() => handleVote(review._id, "helpful")}
+                      className={`flex items-center gap-1.5 transition-all hover:scale-110 ${review.helpfulVotes?.includes(user?._id) ? "text-yellow-50" : "text-richblack-400"}`}
+                      title="Helpful"
+                    >
+                      {review.helpfulVotes?.includes(user?._id) ? <FaThumbsUp /> : <FaRegThumbsUp />}
+                      <span className="text-xs">{review.helpfulVotes?.length || 0}</span>
+                    </button>
+                    
+                    <button 
+                      onClick={() => handleVote(review._id, "nothelpful")}
+                      className={`flex items-center gap-1.5 transition-all hover:scale-110 ${review.notHelpfulVotes?.includes(user?._id) ? "text-pink-200" : "text-richblack-400"}`}
+                      title="Not Helpful"
+                    >
+                      {review.notHelpfulVotes?.includes(user?._id) ? <FaThumbsDown /> : <FaRegThumbsDown />}
+                      <span className="text-xs">{review.notHelpfulVotes?.length || 0}</span>
+                    </button>
+                  </div>
+
+                  {review?.instructorReply && (
+                    <div className="mt-2 text-xs italic text-caribbeangreen-200 border-l-2 border-caribbeangreen-200 pl-2">
+                      <span className="font-semibold text-caribbeangreen-100">Instructor Reply:</span>{" "}
+                      {review.instructorReply.split(" ").length > truncateWords
+                        ? `${review.instructorReply.split(" ").slice(0, truncateWords).join(" ")} ...`
+                        : review.instructorReply}
+                    </div>
+                  )}
                 </div>
               </SwiperSlide>
             )

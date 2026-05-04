@@ -61,6 +61,16 @@ const userSchema = new mongoose.Schema(
 				expiresAt: {
 					type: Date,
 				},
+				paymentId: {
+					type: String,
+					default: null,
+				},
+			},
+		],
+		wishlist: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "Course",
 			},
 		],
 		token: {

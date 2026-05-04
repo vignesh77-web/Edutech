@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom"
 
 import { addToCart } from "../../../slices/cartSlice"
 import { ACCOUNT_TYPE } from "../../../utils/constants"
+import { addToWishlist as apiAddToWishlist } from "../../../services/operations/wishlistAPI"
 
 
 function CourseDetailsCard({ course, setConfirmationModal, handleBuyCourse }) {
@@ -49,6 +50,25 @@ function CourseDetailsCard({ course, setConfirmationModal, handleBuyCourse }) {
     })
   }
 
+  const handleAddToWishlist = async () => {
+    if (user && user?.accountType === ACCOUNT_TYPE.INSTRUCTOR) {
+      toast.error("You are an Instructor. You can't wishlist a course.")
+      return
+    }
+    if (token) {
+      await apiAddToWishlist(course._id, token)
+      return
+    }
+    setConfirmationModal({
+      text1: "You are not logged in!",
+      text2: "Please login to add to Wishlist",
+      btn1Text: "Login",
+      btn2Text: "Cancel",
+      btn1Handler: () => navigate("/login"),
+      btn2Handler: () => setConfirmationModal(null),
+    })
+  }
+
   return (
     <>
       <div
@@ -81,6 +101,11 @@ function CourseDetailsCard({ course, setConfirmationModal, handleBuyCourse }) {
             {(!user || (!isEnrolled || isExpired)) && (
               <button onClick={handleAddToCart} className="blackButton">
                 Add to Cart
+              </button>
+            )}
+            {(!user || (!isEnrolled || isExpired)) && (
+              <button onClick={handleAddToWishlist} className="blackButton text-pink-200 border border-pink-200">
+                 Add to Wishlist
               </button>
             )}
           </div>

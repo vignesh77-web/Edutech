@@ -7,6 +7,7 @@ const { default: mongoose } = require("mongoose");
 const { paymentSuccessEmail } = require("../mail/templates/paymentSuccessEmail");
 const crypto = require("crypto");
 const CourseProgress = require("../models/CourseProgress");
+const Coupon = require("../models/Coupon");
 
 //initiate the razorpay order
 exports.capturePayment = async (req, res) => {
@@ -43,11 +44,35 @@ exports.capturePayment = async (req, res) => {
             return res.status(500).json({ success: false, message: error.message });
         }
     }
+
+    const { couponCode } = req.body;
+    let discountAmount = 0;
+    if (couponCode) {
+        const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+        if (coupon && coupon.active && new Date(coupon.expiryDate) > new Date() && coupon.usedCount < coupon.maxUses) {
+            for (const course_id of courses) {
+                const course = await Course.findById(course_id);
+                if (course) {
+                    if ((!coupon.courseId && course.instructor.toString() === coupon.instructorId.toString()) || 
+                        (coupon.courseId && coupon.courseId.toString() === course_id.toString())) {
+                        discountAmount += (course.price * coupon.discountPercentage) / 100;
+                    }
+                }
+            }
+        }
+    }
+
+    totalAmount -= discountAmount;
+    if (totalAmount < 1) totalAmount = 1; // Minimum amount for razorpay
+
     const currency = "INR";
     const options = {
-        amount: totalAmount * 100,
+        amount: Math.round(totalAmount * 100),
         currency,
         receipt: `rcpt_${Math.random().toString(36).substring(2, 12)}`,
+        notes: {
+            couponCode: couponCode || "",
+        }
     }
 
     try {
@@ -71,7 +96,7 @@ const Subscription = require("../models/Subscription");
 
 // Verify the payment for courses
 exports.verifyPayment = async (req, res) => {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, courses } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, courses, couponCode } = req.body;
     const userId = req.user.id;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !courses || !userId) {
@@ -85,11 +110,16 @@ exports.verifyPayment = async (req, res) => {
         .digest("hex");
 
     if (expectedSignature === razorpay_signature) {
-        await enrollStudents(courses, userId, res);
+        await enrollStudents(courses, userId, res, couponCode, razorpay_payment_id, razorpay_order_id, razorpay_signature);
         return res.status(200).json({ success: true, message: "Payment Verified" });
     }
     return res.status(200).json({ success: false, message: "Payment Failed" });
 };
+
+// ... skipped intermediate export functions using regex or search... wait, I must supply the exact target block.
+// I will just supply the whole enrollStudents block instead to make sure it matches. 
+// Ah, `TargetContent` must perfectly match the original lines. I'll split into two separate replace calls using multi_replace_file_content if I need to modify two spots, or I'll just supply two `replace_file_content` calls. 
+
 
 // Handle Test Series Payment
 exports.captureTestSeriesPayment = async (req, res) => {
@@ -388,10 +418,15 @@ exports.verifySetupFeePayment = async (req, res) => {
     return res.status(400).json({ success: false, message: "Setup Fee Payment Verification Failed" });
 };
 
-const enrollStudents = async (courses, userId, res) => {
+const enrollStudents = async (courses, userId, res, couponCode = null, razorpay_payment_id = null, razorpay_order_id = null, razorpay_signature = null) => {
 
     if (!courses || !userId) {
         return res.status(400).json({ success: false, message: "Please Provide data for Courses or UserId" });
+    }
+
+    let couponData = null;
+    if (couponCode) {
+        couponData = await Coupon.findOne({ code: couponCode.toUpperCase() });
     }
 
     for (const courseId of courses) {
@@ -410,19 +445,26 @@ const enrollStudents = async (courses, userId, res) => {
             // Calculate Commission
             const instructor = enrolledCourse.instructor;
             const commissionRate = instructor.commissionTier === "high-volume" ? 0.05 : 0.10;
-            const platformCommission = enrolledCourse.price * commissionRate;
-            const instructorEarnings = enrolledCourse.price - platformCommission;
+            
+            let finalPrice = enrolledCourse.price;
+            if (couponData && ((!couponData.courseId && instructor._id.toString() === couponData.instructorId.toString()) || (couponData.courseId && couponData.courseId.toString() === courseId.toString()))) {
+                finalPrice -= (enrolledCourse.price * couponData.discountPercentage) / 100;
+            }
+
+            const platformCommission = finalPrice * commissionRate;
+            const instructorEarnings = finalPrice - platformCommission;
 
             // Record Transaction
             await Transaction.create({
                 userId,
                 instructorId: instructor._id,
-                amount: enrolledCourse.price,
+                courseId: courseId,
+                amount: finalPrice,
                 platformCommission,
                 instructorEarnings,
                 type: "Course",
                 status: "Success",
-                // Note: In a production app, we'd pass razorpay details here
+                razorpayDetails: { orderId: razorpay_order_id, paymentId: razorpay_payment_id, signature: razorpay_signature },
             });
 
             const courseProgress = await CourseProgress.create({
@@ -444,6 +486,7 @@ const enrollStudents = async (courses, userId, res) => {
                             courseId: courseId,
                             enrolledAt: enrolledAt,
                             expiresAt: expiresAt,
+                            paymentId: razorpay_payment_id,
                         },
                         courseProgress: courseProgress._id,
                     }
@@ -460,6 +503,10 @@ const enrollStudents = async (courses, userId, res) => {
             console.log(error);
             return res.status(500).json({ success: false, message: error.message });
         }
+    }
+
+    if (couponData) {
+        await Coupon.findByIdAndUpdate(couponData._id, { $inc: { usedCount: 1 } });
     }
 }
 
@@ -489,3 +536,77 @@ exports.sendPaymentSuccessEmail = async (req, res) => {
         return res.status(500).json({ success: false, message: "Could not send email" })
     }
 }
+
+exports.requestRefund = async (req, res) => {
+    try {
+        const { courseId } = req.body;
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+        const courseRecord = user.courses.find(c => c.courseId.toString() === courseId.toString());
+        if (!courseRecord) {
+            return res.status(400).json({ success: false, message: "User is not enrolled in this course" });
+        }
+
+        const enrolledAt = new Date(courseRecord.enrolledAt);
+        const daysSinceEnrollment = (new Date() - enrolledAt) / (1000 * 60 * 60 * 24);
+
+        if (daysSinceEnrollment > 30) {
+            return res.status(400).json({ success: false, message: "Refund window (30 days) has expired." });
+        }
+
+        if (!courseRecord.paymentId) {
+            return res.status(400).json({ success: false, message: "No payment record found for refund. This course may have been free." });
+        }
+
+        const transaction = await Transaction.findOne({
+            userId,
+            courseId,
+            type: "Course",
+            status: "Success"
+        }).sort({ createdAt: -1 });
+
+        if (!transaction) {
+            return res.status(404).json({ success: false, message: "Transaction details not found." });
+        }
+
+        try {
+            await instance.payments.refund(courseRecord.paymentId, {
+                amount: Math.round(transaction.amount * 100),
+                speed: "normal"
+            });
+        } catch (razorpayError) {
+            console.error("Razorpay Refund Error: ", razorpayError);
+            return res.status(500).json({ success: false, message: "Failed to process refund with payment gateway.", error: razorpayError.message });
+        }
+
+        // Remove from user's course list
+        await User.findByIdAndUpdate(userId, {
+            $pull: { courses: { courseId: courseId } }
+        });
+
+        // Remove from Course's studentsEnrolled
+        await Course.findByIdAndUpdate(courseId, {
+            $pull: { studentsEnrolled: userId }
+        });
+
+        // Delete CourseProgress if it exists
+        if (courseRecord.courseProgress) {
+            await CourseProgress.findByIdAndDelete(courseRecord.courseProgress);
+            await User.findByIdAndUpdate(userId, {
+                $pull: { courseProgress: courseRecord.courseProgress }
+            });
+        }
+
+        transaction.status = "Failed";
+        await transaction.save();
+
+        return res.status(200).json({ success: true, message: "Refund processed successfully. Access to course removed." });
+
+    } catch (error) {
+        console.error("Refund error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error." });
+    }
+};

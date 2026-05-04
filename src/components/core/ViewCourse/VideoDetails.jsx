@@ -6,6 +6,9 @@ import { updateCompletedLectures } from '../../../slices/viewCourseSlice';
 import { BigPlayButton, Player } from 'video-react';
 import 'video-react/dist/video-react.css';
 import IconBtn from '../../common/IconBtn';
+import LectureQA from './LectureQA';
+import VideoNotes from './VideoNotes';
+import LectureResources from './LectureResources';
 
 const VideoDetails = () => {
 
@@ -21,6 +24,7 @@ const VideoDetails = () => {
     const [videoEnded, setVideoEnded] = useState(false);
     const [loading, setLoading] = useState(false);
     const [previewSource, setPreviewSource] = useState("")
+    const [activeTab, setActiveTab] = useState("overview"); // "overview" | "qa" | "notes"
 
     useEffect(() => {
 
@@ -170,7 +174,18 @@ const VideoDetails = () => {
                         playsInline
                         onEnded={() => setVideoEnded(true)}
                         src={videoData?.videoUrl}
+                        crossOrigin="anonymous"
                     >
+
+                        {videoData?.captionUrl && (
+                            <track
+                                kind="subtitles"
+                                src={videoData.captionUrl}
+                                srcLang="en"
+                                label="English"
+                                default
+                            />
+                        )}
 
                         <BigPlayButton position="center" />
 
@@ -232,9 +247,49 @@ const VideoDetails = () => {
             <h1 className="mt-4 text-3xl font-semibold">
                 {videoData?.title}
             </h1>
-            <p className="pt-2 pb-6">
-                {videoData?.description}
-            </p>
+
+            {/* TABS MENU */}
+            <div className="mt-6 flex gap-4 border-b border-richblack-700">
+                {["overview", "qa", "notes"].map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`pb-2 px-1 font-semibold text-lg transition-all ${
+                            activeTab === tab 
+                            ? "text-yellow-50 border-b-2 border-yellow-50" 
+                            : "text-richblack-300 hover:text-richblack-100"
+                        }`}
+                    >
+                        {tab === "overview" ? "Overview" : tab === "qa" ? "Q&A" : "My Notes"}
+                    </button>
+                ))}
+            </div>
+
+            {/* TAB PANES */}
+            {activeTab === "overview" && (
+                <div className="mt-4">
+                    <p className="pt-2 pb-6 text-richblack-100">
+                        {videoData?.description}
+                    </p>
+                    <LectureResources resources={videoData?.resources} />
+                </div>
+            )}
+
+            {activeTab === "qa" && (
+                <LectureQA 
+                    courseId={courseId} 
+                    sectionId={sectionId} 
+                    subSectionId={subSectionId} 
+                />
+            )}
+
+            {activeTab === "notes" && (
+                <VideoNotes 
+                    courseId={courseId} 
+                    subSectionId={subSectionId} 
+                    playerRef={playerRef}
+                />
+            )}
         </div>
     )
 }

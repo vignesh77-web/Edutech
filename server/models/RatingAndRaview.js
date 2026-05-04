@@ -21,6 +21,22 @@ const ratingAndReviewSchema = new mongoose.Schema({
 		ref: "Course",
 		index: true,
 	},
+	instructorReply: {
+		type: String,
+		default: null,
+	},
+	helpfulVotes: [
+		{
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "user",
+		}
+	],
+	notHelpfulVotes: [
+		{
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "user",
+		}
+	],
 });
 
 // Export the RatingAndReview model

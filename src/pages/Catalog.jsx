@@ -15,6 +15,23 @@ const Catalog = () => {
     const [catalogPageData, setCatalogPageData] = useState(null);
     const [categoryId, setCategoryId] = useState("");
     const [active, setActive] = useState(1)
+    const [filters, setFilters] = useState({ price: "All", sort: "popular" })
+
+    // Filtered Courses
+    const getFilteredCourses = () => {
+        let courses = catalogPageData?.data?.selectedCategory?.courses || [];
+        
+        if (filters.price === "Free") courses = courses.filter(c => c.price === 0);
+        if (filters.price === "Paid") courses = courses.filter(c => c.price > 0);
+        
+        if (filters.sort === "newest") {
+            courses = [...courses].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        } else if (filters.sort === "popular") {
+            courses = [...courses].sort((a, b) => (b.studentsEnrolled?.length || 0) - (a.studentsEnrolled?.length || 0));
+        }
+        
+        return courses;
+    }
 
     //Fetch all categories
     useEffect(() => {
@@ -85,6 +102,60 @@ const Catalog = () => {
 
                 <div>
                     <CourseSlider Courses={catalogPageData?.data?.selectedCategory?.courses} />
+                </div>
+            </div>
+
+            {/* All Courses Grid with Filters */}
+            <div className="mx-auto box-content w-full max-w-maxContentTab px-4 py-12 lg:max-w-maxContent flex flex-col md:flex-row gap-8">
+                {/* Filters Sidebar */}
+                <div className="w-full md:w-[250px] shrink-0 bg-richblack-800 p-6 rounded-lg h-fit border border-richblack-700">
+                    <h3 className="text-xl text-richblack-5 font-semibold mb-4 border-b border-richblack-700 pb-2">Filters</h3>
+                    
+                    <div className="mb-6">
+                        <p className="text-richblack-300 font-semibold mb-2">Price</p>
+                        <div className="flex flex-col gap-2">
+                            {["All", "Free", "Paid"].map(priceOpt => (
+                                <label key={priceOpt} className="flex items-center gap-2 text-richblack-100 cursor-pointer">
+                                    <input 
+                                        type="radio" 
+                                        name="price" 
+                                        value={priceOpt}
+                                        checked={filters.price === priceOpt}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, price: e.target.value }))}
+                                        className="form-radio text-yellow-50 bg-richblack-700 border-richblack-600 focus:ring-yellow-50"
+                                    />
+                                    {priceOpt}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p className="text-richblack-300 font-semibold mb-2">Sort By</p>
+                        <select 
+                            value={filters.sort}
+                            onChange={(e) => setFilters(prev => ({ ...prev, sort: e.target.value }))}
+                            className="form-style w-full p-2 text-sm"
+                        >
+                            <option value="popular">Most Popular</option>
+                            <option value="newest">Newest First</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Courses Grid */}
+                <div className="flex-1 border-t md:border-t-0 md:border-l border-richblack-700 md:pl-8 pt-8 md:pt-0">
+                    <div className="section_heading mb-6">Browse All in {catalogPageData?.data?.selectedCategory?.name}</div>
+                    
+                    {getFilteredCourses().length === 0 ? (
+                        <p className="text-richblack-300 text-lg">No courses match your active filters.</p>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {getFilteredCourses().map((course, index) => (
+                                <CourseCard course={course} key={index} Height={"h-[200px]"} />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 

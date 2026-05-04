@@ -7,6 +7,7 @@ import { useDispatch, useSelector } from "react-redux"
 import {
   createSubSection,
   updateSubSection,
+  deleteSubSectionResource,
 } from "../../../../../services/operations/courseDetailsAPI"
 import { setCourse } from "../../../../../slices/courseSlice"
 import IconBtn from "../../../../common/IconBtn"
@@ -48,11 +49,12 @@ export default function SubSectionModal({
   // detect whether form is updated or not
   const isFormUpdated = () => {
     const currentValues = getValues()
-    // console.log("changes after editing form values:", currentValues)
     if (
       currentValues.lectureTitle !== modalData.title ||
       currentValues.lectureDesc !== modalData.description ||
-      currentValues.lectureVideo !== modalData.videoUrl
+      currentValues.lectureVideo !== modalData.videoUrl ||
+      (currentValues.courseResource && currentValues.courseResource.length > 0) ||
+      (currentValues.captionFile && currentValues.captionFile.length > 0)
     ) {
       return true
     }
@@ -62,25 +64,35 @@ export default function SubSectionModal({
   // handle the editing of subsection
   const handleEditSubsection = async () => {
     const currentValues = getValues()
-    // console.log("changes after editing form values:", currentValues)
     const formData = new FormData()
-    // console.log("Values After Editing form values:", currentValues)
     formData.append("sectionId", modalData.sectionId)
     formData.append("subSectionId", modalData._id)
+    
     if (currentValues.lectureTitle !== modalData.title) {
       formData.append("title", currentValues.lectureTitle)
     }
     if (currentValues.lectureDesc !== modalData.description) {
       formData.append("description", currentValues.lectureDesc)
     }
-    if (currentValues.lectureVideo !== modalData.videoUrl) {
+    if (currentValues.lectureVideo && currentValues.lectureVideo !== modalData.videoUrl) {
       formData.append("video", currentValues.lectureVideo)
     }
+    if (currentValues.courseResource && currentValues.courseResource.length > 0) {
+      formData.append("courseResource", currentValues.courseResource[0])
+    }
+    if (currentValues.captionFile && currentValues.captionFile.length > 0) {
+      formData.append("captionFile", currentValues.captionFile[0])
+    }
+
+    // Log FormData contents for debugging
+    console.log("Edit FormData contents:")
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}:`, value instanceof File ? value.name : value)
+    }
+
     setLoading(true)
     const result = await updateSubSection(formData, token)
     if (result) {
-      // console.log("result", result)
-      // update the structure of course
       const updatedCourseContent = course.courseContent.map((section) =>
         section._id === modalData.sectionId ? result : section
       )
@@ -91,9 +103,47 @@ export default function SubSectionModal({
     setLoading(false)
   }
 
+  const handleDeleteResource = async () => {
+    if (!modalData?.resources?.length) {
+      toast.error("No resource to delete")
+      return
+    }
+
+    const resource = modalData.resources[0]
+    const confirmDelete = window.confirm(
+      `Delete resource "${resource.name}"? This cannot be undone.`
+    )
+    if (!confirmDelete) return
+
+    setLoading(true)
+    const result = await deleteSubSectionResource(
+      {
+        sectionId: modalData.sectionId,
+        subSectionId: modalData._id,
+        fileUrl: resource.fileUrl,
+      },
+      token
+    )
+    if (result) {
+      const updatedCourseContent = course.courseContent.map((section) =>
+        section._id === modalData.sectionId ? result : section
+      )
+      const updatedCourse = { ...course, courseContent: updatedCourseContent }
+      dispatch(setCourse(updatedCourse))
+      setModalData(null)
+    }
+    setLoading(false)
+  }
+
   const onSubmit = async (data) => {
     // console.log(data)
     if (view) return
+
+    // Validate that video file is present for new lectures
+    if (!edit && !data.lectureVideo) {
+      toast.error("Lecture video is required")
+      return
+    }
 
     if (edit) {
       if (!isFormUpdated()) {
@@ -108,7 +158,25 @@ export default function SubSectionModal({
     formData.append("sectionId", modalData)
     formData.append("title", data.lectureTitle)
     formData.append("description", data.lectureDesc)
-    formData.append("video", data.lectureVideo)
+    
+    // Only append video if it exists
+    if (data.lectureVideo) {
+      formData.append("video", data.lectureVideo)
+    }
+    
+    if (data.courseResource && data.courseResource.length > 0) {
+      formData.append("courseResource", data.courseResource[0])
+    }
+    if (data.captionFile && data.captionFile.length > 0) {
+      formData.append("captionFile", data.captionFile[0])
+    }
+
+    // Log FormData contents for debugging
+    console.log("FormData contents:")
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}:`, value instanceof File ? value.name : value)
+    }
+
     setLoading(true)
     const result = await createSubSection(formData, token)
     if (result) {
@@ -151,6 +219,63 @@ export default function SubSectionModal({
             viewData={view ? modalData.videoUrl : null}
             editData={edit ? modalData.videoUrl : null}
           />
+          {/* Resource Upload */}
+          <div className="flex flex-col space-y-2">
+            <label className="text-sm text-richblack-5" htmlFor="courseResource">
+              Attach Resource (Optional PDF, ZIP, etc)
+            </label>
+            <input
+              type="file"
+              id="courseResource"
+              disabled={view || loading}
+              {...register("courseResource")}
+              className="form-style w-full file:bg-richblack-700 file:text-richblack-5 file:border-none file:rounded-md file:px-4 file:py-2"
+            />
+            {modalData?.resources?.length > 0 && view && (
+              <p className="text-xs text-caribbeangreen-200">
+                Resource Attached: {modalData.resources[0].name}
+              </p>
+            )}
+            {modalData?.resources?.length > 0 && edit && (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-yellow-50">
+                  Existing Resource: {modalData.resources[0].name} (Uploading a new one will add to it)
+                </p>
+                <button
+                  type="button"
+                  onClick={handleDeleteResource}
+                  disabled={loading}
+                  className="rounded-md border border-pink-200 px-3 py-1 text-xs font-semibold text-pink-200 transition-colors hover:bg-pink-200 hover:text-richblack-900 disabled:opacity-50"
+                >
+                  Delete Resource
+                </button>
+              </div>
+            )}
+          </div>
+          {/* Captions Upload */}
+          <div className="flex flex-col space-y-2">
+            <label className="text-sm text-richblack-5" htmlFor="captionFile">
+              Video Captions / Subtitles (Optional .vtt, .srt)
+            </label>
+            <input
+              type="file"
+              id="captionFile"
+              accept=".vtt,.srt"
+              disabled={view || loading}
+              {...register("captionFile")}
+              className="form-style w-full file:bg-richblack-700 file:text-richblack-5 file:border-none file:rounded-md file:px-4 file:py-2"
+            />
+            {modalData?.captionUrl && view && (
+              <p className="text-xs text-caribbeangreen-200">
+                Captions are attached.
+              </p>
+            )}
+            {modalData?.captionUrl && edit && (
+              <p className="text-xs text-yellow-50">
+                Existing Captions will be replaced if you upload a new file.
+              </p>
+            )}
+          </div>
           {/* Lecture Title */}
           <div className="flex flex-col space-y-2">
             <label className="text-sm text-richblack-5" htmlFor="lectureTitle">
@@ -173,20 +298,15 @@ export default function SubSectionModal({
           <div className="flex flex-col space-y-2">
             <label className="text-sm text-richblack-5" htmlFor="lectureDesc">
               Lecture Description{" "}
-              {!view && <sup className="text-pink-200">*</sup>}
+              <span className="text-richblack-400 text-xs">(Optional)</span>
             </label>
             <textarea
               disabled={view || loading}
               id="lectureDesc"
-              placeholder="Enter Lecture Description"
-              {...register("lectureDesc", { required: true })}
+              placeholder="Enter Lecture Description (optional)"
+              {...register("lectureDesc")}
               className="form-style resize-x-none min-h-[130px] w-full"
             />
-            {errors.lectureDesc && (
-              <span className="ml-2 text-xs tracking-wide text-pink-200">
-                Lecture Description is required
-              </span>
-            )}
           </div>
           {!view && (
             <div className="flex justify-end">

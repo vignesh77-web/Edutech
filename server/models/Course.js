@@ -9,6 +9,18 @@ const coursesSchema = new mongoose.Schema({
 		required: true,
 		ref: "user",
 	},
+	coInstructors: [
+		{
+			user: {
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "user",
+			},
+			sharePercentage: {
+				type: Number,
+				default: 0,
+			}
+		}
+	],
 	whatYouWillLearn: {
 		type: String,
 	},
@@ -51,7 +63,8 @@ const coursesSchema = new mongoose.Schema({
 	},
 	status: {
 		type: String,
-		enum: ["Draft", "Published"],
+		enum: ["Draft", "Under Review", "Published"],
+		default: "Draft",
 	},
 	createdAt: {
 		type:Date,

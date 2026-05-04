@@ -14,11 +14,25 @@ export const sidebarLinks = [
     icon: "VscDashboard",
   },
   {
-    id: 3,
+    id: 5,
     name: "My Courses",
     path: "/dashboard/my-courses",
     type: ACCOUNT_TYPE.INSTRUCTOR,
     icon: "VscVm",
+  },
+  {
+    id: 6,
+    name: "Course Reviews",
+    path: "/dashboard/instructor-reviews",
+    type: ACCOUNT_TYPE.INSTRUCTOR,
+    icon: "VscFeedback",
+  },
+  {
+    id: 7,
+    name: "Coupons",
+    path: "/dashboard/instructor-coupons",
+    type: ACCOUNT_TYPE.INSTRUCTOR,
+    icon: "VscTag",
   },
   {
     id: 4,
@@ -68,5 +82,12 @@ export const sidebarLinks = [
     path: "/dashboard/manage-test-series",
     type: ACCOUNT_TYPE.INSTRUCTOR,
     icon: "VscLibrary",
+  },
+  {
+    id: 12,
+    name: "Wishlist",
+    path: "/dashboard/wishlist",
+    type: "Student",
+    icon: "VscHeart",
   },
 ];

@@ -29,6 +29,8 @@ import CourseDetails from "./pages/CourseDetails";
 import ViewCourse from "./pages/ViewCourse";
 import VideoDetails from "./components/core/ViewCourse/VideoDetails";
 import Instructor from "./components/core/Dashboard/InstructorDashboard/Instructor";
+import InstructorReviews from "./components/core/Dashboard/InstructorDashboard/InstructorReviews";
+import InstructorCoupons from "./components/core/Dashboard/InstructorDashboard/InstructorCoupons";
 import Subscriptions from "./components/core/Dashboard/Subscriptions";
 import TestSeries from "./components/core/Dashboard/TestSeries";
 import LiveClasses from "./components/core/Dashboard/LiveClasses";
@@ -37,6 +39,7 @@ import InstructorTestSeries from "./components/core/Dashboard/InstructorTestSeri
 import ManageTests from "./components/core/Dashboard/ManageTests";
 import ViewTestSeries from "./components/core/Dashboard/ViewTestSeries";
 import TakeTest from "./components/core/Dashboard/TakeTest";
+import Wishlist from "./components/core/Dashboard/Wishlist";
 
 function App() {
 
@@ -121,6 +124,7 @@ function App() {
                 <Route path="dashboard/enrolled-courses" element={<EnrolledCourses />} />
                 <Route path="dashboard/subscriptions" element={<Subscriptions />} />
                 <Route path="dashboard/test-series" element={<TestSeries />} />
+                <Route path="dashboard/wishlist" element={<Wishlist />} />
                 <Route path="dashboard/view-test/:testSeriesId" element={<ViewTestSeries />} />
                 <Route path="dashboard/take-test/:testSeriesId/:testId" element={<TakeTest />} />
                 <Route path="dashboard/live-classes" element={<LiveClasses />} />
@@ -157,6 +161,14 @@ function App() {
                   path="view-course/:courseId/section/:sectionId/sub-section/:subSectionId"
                   element={<VideoDetails />}
                 />
+              </>
+            )
+          }
+          {
+            user?.accountType === ACCOUNT_TYPE.INSTRUCTOR && (
+              <>
+                <Route path="dashboard/instructor-reviews" element={<InstructorReviews />} />
+                <Route path="dashboard/instructor-coupons" element={<InstructorCoupons />} />
               </>
             )
           }

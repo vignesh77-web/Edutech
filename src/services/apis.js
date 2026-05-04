@@ -29,6 +29,7 @@ export const studentEndpoints = {
   SUBSCRIPTION_VERIFY_API: BASE_URL + "/payment/verifySubscriptionPayment",
   ADDON_CAPTURE_API: BASE_URL + "/payment/captureAddOnPayment",
   ADDON_VERIFY_API: BASE_URL + "/payment/verifyAddOnPayment",
+  REQUEST_REFUND_API: BASE_URL + "/course/requestRefund",
 }
 
 // COURSE ENDPOINTS
@@ -42,6 +43,7 @@ export const courseEndpoints = {
   CREATE_SUBSECTION_API: BASE_URL + "/course/addSubSection",
   UPDATE_SECTION_API: BASE_URL + "/course/updateSection",
   UPDATE_SUBSECTION_API: BASE_URL + "/course/updateSubSection",
+  DELETE_SUBSECTION_RESOURCE_API: BASE_URL + "/course/deleteSubSectionResource",
   GET_ALL_INSTRUCTOR_COURSES_API: BASE_URL + "/course/getInstructorCourses",
   DELETE_SECTION_API: BASE_URL + "/course/deleteSection",
   DELETE_SUBSECTION_API: BASE_URL + "/course/deleteSubSection",
@@ -50,11 +52,17 @@ export const courseEndpoints = {
     BASE_URL + "/course/getFullCourseDetails",
   LECTURE_COMPLETION_API: BASE_URL + "/course/updateCourseProgress",
   CREATE_RATING_API: BASE_URL + "/course/createRating",
+  DOWNLOAD_RESOURCE_API: BASE_URL + "/course/download-resource",
 }
 
 // RATINGS AND REVIEWS
 export const ratingsEndpoints = {
   REVIEWS_DETAILS_API: BASE_URL + "/course/getReviews",
+  GET_AVERAGE_RATING_API: BASE_URL + "/course/getAverageRating",
+  GET_INSTRUCTOR_REVIEWS_API: BASE_URL + "/course/getInstructorReviews",
+  ADD_REPLY_TO_REVIEW_API: BASE_URL + "/course/replyToReview",
+  TOGGLE_HELPFUL_API: BASE_URL + "/course/toggleHelpful",
+  TOGGLE_NOT_HELPFUL_API: BASE_URL + "/course/toggleNotHelpful",
 }
 
 // CATAGORIES API
@@ -86,4 +94,33 @@ export const liveClassEndpoints = {
   UPDATE_LIVE_CLASS_API: BASE_URL + "/course/liveClass/update",
   DELETE_LIVE_CLASS_API: BASE_URL + "/course/liveClass/delete",
   GET_PUBLIC_LIVE_CLASSES_API: BASE_URL + "/course/liveClass/public",
+}
+
+// WISHLIST ENDPOINTS
+export const wishlistEndpoints = {
+  ADD_TO_WISHLIST_API: BASE_URL + "/course/addToWishlist",
+  REMOVE_FROM_WISHLIST_API: BASE_URL + "/course/removeFromWishlist",
+  GET_WISHLIST_API: BASE_URL + "/course/getWishlist",
+}
+
+// COUPON ENDPOINTS
+export const couponEndpoints = {
+  CREATE_COUPON_API: BASE_URL + "/course/createCoupon",
+  GET_INSTRUCTOR_COUPONS_API: BASE_URL + "/course/getInstructorCoupons",
+  DELETE_COUPON_API: BASE_URL + "/course/deleteCoupon",
+  APPLY_COUPON_API: BASE_URL + "/course/applyCoupon",
+}
+
+// LECTURE Q&A ENDPOINTS
+export const lectureQaEndpoints = {
+  ASK_QUESTION_API: BASE_URL + "/course/askQuestion",
+  GET_QUESTIONS_API: BASE_URL + "/course/getQuestionsForLecture",
+  ANSWER_QUESTION_API: BASE_URL + "/course/answerQuestion",
+}
+
+// VIDEO NOTES ENDPOINTS
+export const videoNotesEndpoints = {
+  ADD_VIDEO_NOTE_API: BASE_URL + "/course/addVideoNote",
+  GET_VIDEO_NOTES_API: BASE_URL + "/course/getVideoNotes",
+  DELETE_VIDEO_NOTE_API: BASE_URL + "/course/deleteVideoNote",
 }
